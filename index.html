@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>NX Task Flow</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #070B14;
+      --card-bg: #0F1626;
+      --card-border: rgba(59, 130, 246, 0.22);
+      --primary-blue: #2563EB;
+      --accent-cyan: #38BDF8;
+    }
+    body {
+      background-color: var(--bg-dark);
+      color: #F8FAFC;
+      font-family: 'Inter', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .font-mono-num {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .nx-card {
+      background: linear-gradient(145deg, #11192B 0%, #0B101D 100%);
+      border: 1px solid var(--card-border);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+    .nx-hero {
+      background: radial-gradient(circle at top right, rgba(37, 99, 235, 0.35), transparent 60%),
+                  linear-gradient(135deg, #0F1D3A 0%, #090E1A 100%);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+    .btn-primary {
+      background: linear-gradient(90deg, #2563EB 0%, #3B82F6 100%);
+      box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
+      transition: transform 0.1s ease;
+    }
+    .btn-primary:active {
+      transform: scale(0.97);
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+      animation: fadeIn 0.2s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    ::-webkit-scrollbar { display: none; }
+  </style>
+</head>
+<body class="min-h-screen pb-28">
+
+  <!-- TOP COMPACT HEADER -->
+  <header class="sticky top-0 z-30 bg-[#070B14]/90 backdrop-blur-md border-b border-blue-500/15 px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-2.5">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center font-extrabold text-sm shadow-lg shadow-blue-500/30 border border-blue-300/30">
+        NX
+      </div>
+      <div>
+        <div class="flex items-center gap-1.5">
+          <span class="font-extrabold text-sm tracking-wide text-white">NX TASK FLOW</span>
+          <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-400/30">TON</span>
+        </div>
+        <p id="tg-username" class="text-xs text-slate-400">@user</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <div id="header-rank-badge" class="px-2.5 py-1 rounded-full bg-slate-900 border border-blue-500/30 flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span id="header-rank-text" class="text-xs font-semibold text-blue-200">Lv.1 • Bronze</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="px-4 pt-4 max-w-md mx-auto space-y-4">
+
+    <!-- ================= TAB 1: HOME ================= -->
+    <section id="tab-home" class="tab-content active space-y-4">
+      
+      <!-- Hero Banner -->
+      <div class="nx-hero rounded-2xl p-4 relative overflow-hidden">
+        <span class="inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-cyan-300 border border-cyan-400/30 mb-1.5">
+          ⚡ Official Task & Mining Hub
+        </span>
+        <h1 class="text-lg font-extrabold text-white leading-snug">NX FLOW MINING</h1>
+        <p class="text-xs text-slate-300 mt-0.5">Mine • Complete Tasks • Recruit • Withdraw</p>
+      </div>
+
+      <!-- Balance Card -->
+      <div class="nx-card rounded-2xl p-4 flex items-center justify-between">
+        <div>
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Available Balance</p>
+          <div class="flex items-baseline gap-1.5 mt-1">
+            <span id="main-balance" class="font-mono-num text-2xl font-extrabold text-white">0.0000</span>
+            <span class="text-sm font-bold text-blue-400">NX</span>
+          </div>
+          <p id="est-value" class="text-xs text-slate-400 mt-0.5">≈ $0.00 est. reward value</p>
+        </div>
+        <button onclick="openWithdrawModal()" class="px-3.5 py-2 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 border border-blue-400/30 text-blue-300 text-xs font-bold transition">
+          Withdraw →
+        </button>
+      </div>
+
+      <!-- Live Chronometer Mining Card -->
+      <div class="nx-card rounded-2xl p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-400/30 flex items-center justify-center text-blue-400">
+              ⚡
+            </div>
+            <div>
+              <h2 class="text-sm font-bold text-white">Chronometer Mining</h2>
+              <div class="flex items-center gap-1.5">
+                <span id="mining-dot" class="w-2 h-2 rounded-full bg-slate-500"></span>
+                <span id="mining-status" class="text-[11px] text-slate-400">Ready to start</span>
+              </div>
+            </div>
+          </div>
+          <span id="mining-multiplier" class="px-2.5 py-1 rounded-lg bg-blue-950 border border-blue-500/30 text-xs font-bold text-cyan-300">
+            ⚡ x1.00
+          </span>
+        </div>
+
+        <div class="py-1">
+          <div class="flex items-baseline gap-1.5">
+            <span id="mined-amount" class="font-mono-num text-2xl font-extrabold text-cyan-300">+0.0000</span>
+            <span class="text-xs font-bold text-slate-400">NX</span>
+          </div>
+          <div class="flex justify-between text-[11px] text-slate-400 mt-2">
+            <span id="mining-timer">Session: 24h 00m 00s</span>
+            <span id="mining-percent">0%</span>
+          </div>
+          <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden mt-1.5">
+            <div id="mining-bar" class="h-full bg-gradient-to-r from-blue-600 to-cyan-400 w-0 transition-all duration-300"></div>
+          </div>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl px-3 py-2 flex justify-between items-center text-xs">
+          <span class="text-slate-400">Daily Rate: <strong id="daily-rate-text" class="text-white">24.0 NX/day</strong></span>
+          <span id="hourly-rate-text" class="text-blue-400 font-semibold">1.00 NX/h • Lv.1</span>
+        </div>
+
+        <button id="mining-btn" onclick="handleMiningAction()" class="w-full py-3 rounded-xl btn-primary text-white font-bold text-sm flex items-center justify-center gap-2">
+          <span>⚡ Start Mining</span>
+        </button>
+      </div>
+
+      <!-- Next Level Progress Card -->
+      <div class="nx-card rounded-2xl p-4 space-y-2.5">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <span id="next-lvl-badge" class="px-2 py-1 rounded-lg bg-blue-500/20 border border-blue-400/30 text-xs font-extrabold text-blue-300">LV.1</span>
+            <div>
+              <h3 id="next-lvl-title" class="text-sm font-bold text-white">Next Level: 2 • Silver</h3>
+              <p id="next-lvl-desc" class="text-[11px] text-slate-400">Unlocks 30.0 NX/day (x1.25 boost)</p>
+            </div>
+          </div>
+        </div>
+        <div class="pt-1">
+          <div class="flex justify-between text-xs mb-1">
+            <span class="text-slate-400">Complete 5 Tasks to unlock Silver</span>
+            <span id="level-progress-text" class="font-mono-num font-bold text-blue-300">0 / 5</span>
+          </div>
+          <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+            <div id="level-bar" class="h-full bg-blue-500 w-0 transition-all"></div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ================= TAB 2: TASKS & SELF-SERVE PROMOTE ================= -->
+    <section id="tab-tasks" class="tab-content space-y-4">
+      
+      <!-- Promote Your Channel/Bot Banner Card -->
+      <div class="nx-hero rounded-2xl p-4 space-y-3">
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-cyan-300 shrink-0 text-lg">
+            📢
+          </div>
+          <div>
+            <h2 class="text-sm font-extrabold text-white">Promote Your Channel, Bot or Link</h2>
+            <p class="text-xs text-slate-300 mt-0.5 leading-relaxed">
+              Get <strong class="text-cyan-300">1,000 clicks</strong> for <strong class="text-white">1 TON</strong> • Auto-activates on TON
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5 pt-1">
+          <button onclick="openPromoteModal()" class="py-2.5 rounded-xl btn-primary text-xs font-bold text-white shadow-lg">
+            Promote Link
+          </button>
+          <button onclick="openMyAdsModal()" class="py-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-blue-500/30 text-xs font-bold text-blue-200">
+            My Ads (<span id="my-ads-count">0</span>)
+          </button>
+        </div>
+      </div>
+
+      <!-- Filter Pills -->
+      <div class="flex items-center gap-2 overflow-x-auto pb-1">
+        <button onclick="filterTasks('all', this)" class="filter-pill active px-3.5 py-1.5 rounded-full text-xs font-bold bg-blue-600 text-white shrink-0">
+          All tasks
+        </button>
+        <button onclick="filterTasks('channel', this)" class="filter-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-slate-900 border border-slate-800 text-slate-300 shrink-0">
+          Social
+        </button>
+        <button onclick="filterTasks('bot', this)" class="filter-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-slate-900 border border-slate-800 text-slate-300 shrink-0">
+          Bots
+        </button>
+        <button onclick="filterTasks('ready', this)" class="filter-pill px-3.5 py-1.5 rounded-full text-xs font-semibold bg-slate-900 border border-slate-800 text-slate-300 shrink-0">
+          Ready (<span id="ready-count">0</span>)
+        </button>
+      </div>
+
+      <!-- Promoted & Official Tasks List -->
+      <div id="task-list" class="space-y-3">
+        <div class="text-center py-8 text-xs text-slate-400">Loading live tasks...</div>
+      </div>
+
+    </section>
+
+    <!-- ================= TAB 3: REFER & CREW ================= -->
+    <section id="tab-refer" class="tab-content space-y-4">
+      <div>
+        <p class="text-[11px] font-bold uppercase tracking-wider text-blue-400">Grow Together</p>
+        <h2 class="text-xl font-extrabold text-white">Invite & Earn</h2>
+        <p class="text-xs text-slate-400">Build your NX squad and earn 10% from crew claims.</p>
+      </div>
+
+      <!-- Commission Highlight -->
+      <div class="nx-hero rounded-2xl p-4 flex items-center gap-4">
+        <div class="text-3xl font-extrabold text-cyan-300 font-mono-num">10%</div>
+        <div class="text-xs text-slate-300 leading-relaxed">
+          <strong class="text-white block text-sm">From qualified crewmates' claims</strong>
+          Plus unlock Level 2 Silver when 3 friends join via your link.
+        </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="grid grid-cols-3 gap-2.5">
+        <div class="nx-card rounded-xl p-3 text-center">
+          <p class="text-[11px] text-slate-400">Invited</p>
+          <p id="ref-invited-count" class="font-mono-num text-lg font-extrabold text-white mt-0.5">0</p>
+        </div>
+        <div class="nx-card rounded-xl p-3 text-center">
+          <p class="text-[11px] text-slate-400">Qualified</p>
+          <p class="font-mono-num text-lg font-extrabold text-emerald-400 mt-0.5">0</p>
+        </div>
+        <div class="nx-card rounded-xl p-3 text-center">
+          <p class="text-[11px] text-slate-400">Earned</p>
+          <p class="font-mono-num text-lg font-extrabold text-blue-400 mt-0.5">0.00</p>
+        </div>
+      </div>
+
+      <!-- Invite Link Card -->
+      <div class="nx-card rounded-2xl p-4 space-y-3">
+        <p class="text-xs font-bold text-white">Your Invite Link</p>
+        <div id="invite-link-box" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs font-mono-num text-slate-300 truncate">
+          https://t.me/NXTaskFlowBot?start=ref
+        </div>
+        <div class="grid grid-cols-2 gap-2.5">
+          <button onclick="shareInvite()" class="py-2.5 rounded-xl btn-primary text-xs font-bold text-white">
+            Invite Friends
+          </button>
+          <button onclick="copyInvite()" id="copy-btn" class="py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-white">
+            Copy Link
+          </button>
+        </div>
+      </div>
+
+      <!-- Crew List -->
+      <div class="nx-card rounded-2xl p-4 space-y-3">
+        <div class="flex justify-between items-center">
+          <h3 class="text-sm font-bold text-white">Your Crew (0)</h3>
+          <span class="text-[11px] text-blue-400">Live Status</span>
+        </div>
+        <div class="text-center py-6 bg-slate-900/50 rounded-xl border border-slate-800/80">
+          <p class="text-xs text-slate-400">No crewmates yet. Share your link to start earning!</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TAB 4: PROFILE & CHEST ================= -->
+    <section id="tab-profile" class="tab-content space-y-4">
+      <div>
+        <p class="text-[11px] font-bold uppercase tracking-wider text-blue-400">Your Account</p>
+        <h2 class="text-xl font-extrabold text-white">Profile & Chest</h2>
+      </div>
+
+      <div class="nx-card rounded-2xl p-4 flex items-center gap-3.5">
+        <div id="profile-avatar" class="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-lg font-extrabold text-white">
+          U
+        </div>
+        <div>
+          <h3 id="profile-name" class="text-base font-bold text-white">Telegram User</h3>
+          <p class="text-xs text-blue-400 font-medium">@NXTaskFlowBot</p>
+          <p id="profile-handle" class="text-xs text-slate-400">@user</p>
+        </div>
+      </div>
+
+      <div class="nx-card rounded-2xl p-4 space-y-3 text-xs">
+        <div class="flex justify-between py-1 border-b border-slate-800">
+          <span class="text-slate-400">Tasks Completed</span>
+          <span id="stat-tasks" class="font-mono-num font-bold text-white">0</span>
+        </div>
+        <div class="flex justify-between py-1 border-b border-slate-800">
+          <span class="text-slate-400">Account Rank</span>
+          <span id="profile-rank" class="font-bold text-blue-400">Bronze Lv.1</span>
+        </div>
+        <div class="flex justify-between py-1">
+          <span class="text-slate-400">Member Since</span>
+          <span id="member-since" class="font-semibold text-white">Today</span>
+        </div>
+      </div>
+
+      <!-- TonConnect Wallet Section -->
+      <div class="nx-card rounded-2xl p-4 space-y-3">
+        <div class="flex justify-between items-center">
+          <span class="text-xs font-bold text-white">TON Wallet</span>
+          <div id="ton-connect-btn"></div>
+        </div>
+        <button onclick="openWithdrawModal()" class="w-full py-3 rounded-xl btn-primary text-xs font-bold text-white">
+          Open Withdrawal Chest
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FLOATING BOTTOM NAVIGATION -->
+  <nav class="fixed bottom-3 left-4 right-4 max-w-md mx-auto bg-[#0D1322]/95 backdrop-blur-lg border border-blue-500/20 rounded-2xl p-1.5 flex justify-around items-center z-40 shadow-2xl">
+    <button onclick="switchTab('home', this)" class="nav-btn active flex-1 py-2 rounded-xl flex flex-col items-center gap-1 text-blue-400 bg-blue-500/15 transition">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+      <span class="text-[10px] font-bold">Home</span>
+    </button>
+    <button onclick="switchTab('tasks', this)" class="nav-btn flex-1 py-2 rounded-xl flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 transition">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span class="text-[10px] font-semibold">Tasks</span>
+    </button>
+    <button onclick="switchTab('refer', this)" class="nav-btn flex-1 py-2 rounded-xl flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 transition">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      <span class="text-[10px] font-semibold">Crew</span>
+    </button>
+    <button onclick="switchTab('profile', this)" class="nav-btn flex-1 py-2 rounded-xl flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200 transition">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+      <span class="text-[10px] font-semibold">Profile</span>
+    </button>
+  </nav>
+
+  <!-- ================= MODAL 1: PROMOTE LINK (1 TON AUTO-ACTIVATE) ================= -->
+  <div id="promote-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-end justify-center">
+    <div class="bg-[#0E1525] border-t border-blue-500/30 rounded-t-3xl w-full max-w-md p-5 space-y-4">
+      <div class="flex justify-between items-center">
+        <div>
+          <h3 class="text-base font-extrabold text-white">Promote Channel or Bot</h3>
+          <p class="text-xs text-slate-400">Auto-verifies & publishes instantly after 1 TON fee</p>
+        </div>
+        <button onclick="closeModal('promote-modal')" class="w-8 h-8 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center font-bold">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="text-slate-300 font-semibold block mb-1">Promotion Type</label>
+          <select id="ad-type" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-blue-500">
+            <option value="CHANNEL">Telegram Channel</option>
+            <option value="GROUP">Telegram Group</option>
+            <option value="BOT">Telegram Bot / Mini App</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="text-slate-300 font-semibold block mb-1">Campaign Title</label>
+          <input id="ad-title" type="text" placeholder="e.g. Join NX Official Community" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-blue-500" />
+        </div>
+
+        <div>
+          <label class="text-slate-300 font-semibold block mb-1">Telegram Link</label>
+          <input id="ad-link" type="url" placeholder="https://t.me/yourchannel" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-blue-500" />
+        </div>
+
+        <div class="bg-blue-950/40 border border-blue-500/25 rounded-xl p-3 flex justify-between items-center">
+          <div>
+            <p class="font-bold text-white">Package: 1,000 Verified Clicks</p>
+            <p class="text-[11px] text-slate-400">Reward per user: +50 NX</p>
+          </div>
+          <span class="font-mono-num text-sm font-extrabold text-cyan-300">1.00 TON</span>
+        </div>
+      </div>
+
+      <button id="pay-ad-btn" onclick="submitPromotedAd()" class="w-full py-3.5 rounded-xl btn-primary text-white font-bold text-sm">
+        Pay 1 TON & Auto-Activate
+      </button>
+    </div>
+  </div>
+
+  <!-- ================= MODAL 2: MY ADS ================= -->
+  <div id="my-ads-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-end justify-center">
+    <div class="bg-[#0E1525] border-t border-blue-500/30 rounded-t-3xl w-full max-w-md p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+      <div class="flex justify-between items-center">
+        <h3 class="text-base font-extrabold text-white">My Promoted Ads</h3>
+        <button onclick="closeModal('my-ads-modal')" class="w-8 h-8 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center font-bold">✕</button>
+      </div>
+      <div id="my-ads-list" class="space-y-2.5 text-xs">
+        <p class="text-slate-400 text-center py-6">You haven't created any promoted ads yet.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL 3: WITHDRAW CHEST ================= -->
+  <div id="withdraw-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-end justify-center">
+    <div class="bg-[#0E1525] border-t border-blue-500/30 rounded-t-3xl w-full max-w-md p-5 space-y-4">
+      <div class="flex justify-between items-center">
+        <div>
+          <h3 class="text-base font-extrabold text-white">WITHDRAW NX ON-CHAIN</h3>
+          <p class="text-xs text-slate-400">Withdrawals are dispatched to your TON wallet</p>
+        </div>
+        <button onclick="closeModal('withdraw-modal')" class="w-8 h-8 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center font-bold">✕</button>
+      </div>
+
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 space-y-2.5 text-xs">
+        <div class="flex justify-between">
+          <span class="text-slate-300">1. Account Active Status</span>
+          <span class="text-emerald-400 font-bold">Passed ✓</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-300">2. Level 2 Silver (5 Tasks)</span>
+          <span id="modal-lvl-status" class="text-amber-400 font-bold">Current Lv.1</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-300">3. Min Balance (500 NX)</span>
+          <span id="modal-bal-status" class="font-mono-num text-blue-400 font-bold">0.00 NX</span>
+        </div>
+      </div>
+
+      <div>
+        <label class="text-xs text-slate-400 block mb-1.5">Amount to withdraw (NX)</label>
+        <input id="withdraw-amount" type="number" value="500" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 font-mono-num text-sm text-white focus:outline-none focus:border-blue-500" />
+      </div>
+
+      <button onclick="requestWithdraw()" class="w-full py-3 rounded-xl btn-primary text-white font-bold text-sm">
+        Submit Withdrawal Request
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // CONFIGURATION (LIVE CREDENTIALS INTEGRATED)
+    // =========================================================================
+    const SUPABASE_URL = "https://whjdiilnzehnxsfhhbqh.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndoamRpaWxuemVobnhzZmhoYnFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ5NzM0ODIsImV4cCI6MjExMDU0OTQ4Mn0.zgqXNgJ2JuAgXg4FQIjSnJ12XkK6PJYXn4eCeZdCv68";
+    const ADMIN_TON_WALLET = "UQAfVVILTzEVcoIWhYGD15w8Yf_6Lqw6zj_1TaBLTpyuCsi0";
+    const MANIFEST_URL = "https://wakifbinzaman-web-developer.github.io/NX-New-Mini/tonconnect-manifest.json";
+
+    // Initialize Supabase Client
+    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Initialize TonConnect UI
+    let tonConnectUI = null;
+    try {
+      tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+        manifestUrl: MANIFEST_URL,
+        buttonRootId: 'ton-connect-btn'
+      });
+    } catch (e) {
+      console.warn("TonConnect init warning:", e);
+    }
+
+    // Telegram WebApp Init
+    const tg = window.Telegram?.WebApp;
+    let currentUser = {
+      id: "guest_" + Math.floor(Math.random() * 100000),
+      username: "user",
+      fullName: "Telegram User"
+    };
+
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      const user = tg.initDataUnsafe?.user;
+      if (user) {
+        currentUser.id = String(user.id);
+        currentUser.username = user.username || `user_${user.id}`;
+        currentUser.fullName = `${user.first_name} ${user.last_name || ''}`.trim();
+      }
+    }
+
+    // Populate User Header & Profile
+    document.getElementById('tg-username').textContent = `@${currentUser.username}`;
+    document.getElementById('profile-name').textContent = currentUser.fullName;
+    document.getElementById('profile-handle').textContent = `@${currentUser.username}`;
+    document.getElementById('profile-avatar').textContent = currentUser.fullName.charAt(0).toUpperCase();
+    document.getElementById('invite-link-box').textContent = `https://t.me/NXTaskFlowBot?start=r_${currentUser.id}`;
+
+    // App State
+    let balance = 0.0;
+    let tasksDone = 0;
+    let miningStartTime = null;
+    let miningInterval = null;
+    let currentFilter = 'all';
+
+    // Default Official Tasks + Dynamic Promoted Ads from Supabase
+    const officialTasks = [
+      { id: "off_1", type: "CHANNEL", title: "Join NX Task Flow Official", desc: "Join the official Telegram channel to claim reward!", link: "https://t.me/NXTaskFlowBot", reward: 50, clicks: 842, target: 1000, isOfficial: true },
+      { id: "off_2", type: "BOT", title: "Daily Check-in & Bonus", desc: "Verify your daily activity on NX Flow Hub!", link: "https://t.me/NXTaskFlowBot", reward: 25, clicks: 910, target: 1000, isOfficial: true }
+    ];
+
+    let allTasks = [...officialTasks];
+    let taskStates = JSON.parse(localStorage.getItem(`nx_tasks_${currentUser.id}`) || "{}");
+
+    // =========================================================================
+    // SUPABASE DATA SYNC (USERS & LIVE ADS)
+    // =========================================================================
+    async function initUserInDB() {
+      try {
+        const { data, error } = await db
+          .from('users')
+          .select('*')
+          .eq('tg_id', currentUser.id)
+          .single();
+
+        if (data) {
+          balance = Number(data.balance) || 0;
+          tasksDone = Number(data.tasks_done) || 0;
+          miningStartTime = data.mining_start ? new Date(data.mining_start).getTime() : null;
+          if (data.created_at) {
+            const d = new Date(data.created_at);
+            document.getElementById('member-since').textContent = d.toLocaleDateString();
+          }
+        } else {
+          // Create new user row
+          await db.from('users').insert([{
+            tg_id: currentUser.id,
+            username: currentUser.username,
+            full_name: currentUser.fullName,
+            balance: 0,
+            tasks_done: 0
+          }]);
+        }
+        updateUI();
+        if (miningStartTime) startMiningLoop();
+      } catch (err) {
+        console.error("DB User Sync Error:", err);
+      }
+    }
+
+    async function syncUserToDB() {
+      try {
+        await db.from('users').update({
+          balance: balance,
+          tasks_done: tasksDone,
+          mining_start: miningStartTime ? new Date(miningStartTime).toISOString() : null
+        }).eq('tg_id', currentUser.id);
+      } catch (err) {
+        console.error("DB Update Error:", err);
+      }
+    }
+
+    async function loadLiveAds() {
+      try {
+        const { data, error } = await db
+          .from('ads')
+          .select('*')
+          .eq('status', 'active')
+          .order('created_at', { ascending: false });
+
+        if (data) {
+          const livePromoted = data.map(ad => ({
+            id: `ad_${ad.id}`,
+            dbId: ad.id,
+            ownerId: ad.owner_id,
+            type: ad.ad_type,
+            title: ad.title,
+            desc: `Open and join this Telegram ${ad.ad_type.toLowerCase()} to claim your NX reward!`,
+            link: ad.link,
+            reward: 50,
+            clicks: ad.current_clicks || 0,
+            target: ad.target_clicks || 1000,
+            isOfficial: false
+          }));
+
+          allTasks = [...livePromoted, ...officialTasks];
+          updateMyAdsList(data);
+        }
+        renderTasks();
+      } catch (err) {
+        console.error("Load Ads Error:", err);
+        renderTasks();
+      }
+    }
+
+    // =========================================================================
+    // MINING SYSTEM (24H REAL CHRONOMETER)
+    // =========================================================================
+    const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours in ms
+
+    function getHourlyRate() {
+      return tasksDone >= 5 ? 1.25 : 1.00; // Silver Lv.2 gets 1.25 NX/h
+    }
+
+    function handleMiningAction() {
+      const hourlyRate = getHourlyRate();
+      if (!miningStartTime) {
+        // Start Mining
+        miningStartTime = Date.now();
+        syncUserToDB();
+        startMiningLoop();
+        if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+      } else {
+        // Claim Mined NX
+        const elapsed = Math.min(SESSION_DURATION, Date.now() - miningStartTime);
+        const mined = (elapsed / 3600000) * hourlyRate;
+        if (mined > 0.0001) {
+          balance += mined;
+          miningStartTime = null;
+          clearInterval(miningInterval);
+          resetMiningUI();
+          updateUI();
+          syncUserToDB();
+          if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+        }
+      }
+    }
+
+    function startMiningLoop() {
+      const btn = document.getElementById('mining-btn');
+      const status = document.getElementById('mining-status');
+      const dot = document.getElementById('mining-dot');
+      const hourlyRate = getHourlyRate();
+
+      status.textContent = `Running • Earning ${hourlyRate.toFixed(2)} NX/h`;
+      status.className = "text-[11px] text-emerald-400 font-semibold";
+      dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-ping";
+      btn.innerHTML = "<span>⚡ Claim Mined NX</span>";
+
+      clearInterval(miningInterval);
+      miningInterval = setInterval(() => {
+        if (!miningStartTime) return;
+        const now = Date.now();
+        const elapsed = Math.min(SESSION_DURATION, now - miningStartTime);
+        const remaining = Math.max(0, SESSION_DURATION - elapsed);
+        const mined = (elapsed / 3600000) * hourlyRate;
+        const pct = Math.min(100, (elapsed / SESSION_DURATION) * 100);
+
+        document.getElementById('mined-amount').textContent = `+${mined.toFixed(4)}`;
+        document.getElementById('mining-bar').style.width = `${pct}%`;
+        document.getElementById('mining-percent').textContent = `${Math.floor(pct)}%`;
+
+        const hrs = Math.floor(remaining / 3600000);
+        const mins = Math.floor((remaining % 3600000) / 60000);
+        const secs = Math.floor((remaining % 60000) / 1000);
+        document.getElementById('mining-timer').textContent =
+          `Pauses in: ${String(hrs).padStart(2, '0')}h ${String(mins).padStart(2, '0')}m ${String(secs).padStart(2, '0')}s`;
+      }, 1000);
+    }
+
+    function resetMiningUI() {
+      document.getElementById('mined-amount').textContent = "+0.0000";
+      document.getElementById('mining-bar').style.width = "0%";
+      document.getElementById('mining-percent').textContent = "0%";
+      document.getElementById('mining-timer').textContent = "Session: 24h 00m 00s";
+      document.getElementById('mining-status').textContent = "Ready to start";
+      document.getElementById('mining-status').className = "text-[11px] text-slate-400";
+      document.getElementById('mining-dot').className = "w-2 h-2 rounded-full bg-slate-500";
+      document.getElementById('mining-btn').innerHTML = "<span>⚡ Start Mining</span>";
+    }
+
+    // =========================================================================
+    // TASKS & SELF-SERVE 1 TON AUTO-ACTIVATE ADS
+    // =========================================================================
+    function filterTasks(filter, btnEl) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-pill').forEach(p => {
+        p.classList.remove('bg-blue-600', 'text-white', 'font-bold');
+        p.classList.add('bg-slate-900', 'border', 'border-slate-800', 'text-slate-300', 'font-semibold');
+      });
+      btnEl.classList.remove('bg-slate-900', 'border', 'border-slate-800', 'text-slate-300', 'font-semibold');
+      btnEl.classList.add('bg-blue-600', 'text-white', 'font-bold');
+      renderTasks();
+    }
+
+    function renderTasks() {
+      const container = document.getElementById('task-list');
+      let readyCount = 0;
+
+      const filtered = allTasks.filter(t => {
+        const state = taskStates[t.id] || 'new';
+        if (state === 'ready') readyCount++;
+        if (currentFilter === 'channel') return t.type === 'CHANNEL' || t.type === 'GROUP';
+        if (currentFilter === 'bot') return t.type === 'BOT';
+        if (currentFilter === 'ready') return state === 'ready';
+        return true;
+      });
+
+      document.getElementById('ready-count').textContent = readyCount;
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="nx-card rounded-2xl p-6 text-center text-xs text-slate-400">No tasks available in this category yet.</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(t => {
+        const state = taskStates[t.id] || 'new'; // new | ready | claimed
+        const progressVal = state === 'claimed' ? '1/1' : '0/1';
+        const progressPct = state === 'claimed' ? '100%' : (state === 'ready' ? '50%' : '0%');
+
+        let btnHtml = '';
+        if (state === 'new') {
+          btnHtml = `<button onclick="startTask('${t.id}')" class="px-5 py-2 rounded-xl btn-primary text-xs font-bold text-white">Start</button>`;
+        } else if (state === 'ready') {
+          btnHtml = `<button onclick="claimTask('${t.id}')" class="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-extrabold shadow-lg shadow-emerald-500/30 animate-pulse">Claim +${t.reward} NX</button>`;
+        } else {
+          btnHtml = `<button disabled class="px-5 py-2 rounded-xl bg-slate-800/90 border border-slate-700 text-slate-400 text-xs font-bold">Claimed</button>`;
+        }
+
+        return `
+          <div class="nx-card rounded-2xl p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-blue-500/15 text-blue-300 border border-blue-400/30">
+                  PROMOTED • ${t.type}
+                </span>
+                <span class="font-mono-num text-xs font-extrabold text-cyan-300">+${t.reward} NX</span>
+                <span class="font-mono-num text-[11px] px-2 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800">
+                  ${t.clicks}/${t.target}
+                </span>
+              </div>
+              <div class="w-6 h-6 rounded-full border ${state === 'claimed' ? 'border-emerald-400 text-emerald-400 bg-emerald-500/10' : 'border-slate-700 text-slate-600'} flex items-center justify-center text-xs font-bold">
+                ✓
+              </div>
+            </div>
+
+            <div>
+              <h3 class="text-sm font-extrabold text-white">${t.title}</h3>
+              <p class="text-xs text-slate-400 mt-0.5 leading-relaxed">${t.desc}</p>
+            </div>
+
+            <div class="space-y-1.5">
+              <div class="flex justify-between text-[11px] text-slate-400">
+                <span>Progress</span>
+                <span class="font-mono-num font-bold text-slate-300">${progressVal}</span>
+              </div>
+              <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                <div class="h-full ${state === 'claimed' ? 'bg-emerald-400' : 'bg-blue-500'} transition-all duration-300" style="width: ${progressPct}"></div>
+              </div>
+            </div>
+
+            <div class="flex justify-end pt-1">
+              ${btnHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function startTask(taskId) {
+      const task = allTasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      // Open Telegram link
+      if (tg?.openTelegramLink && task.link.startsWith('https://t.me/')) {
+        tg.openTelegramLink(task.link);
+      } else {
+        window.open(task.link, '_blank');
+      }
+
+      // Mark as ready to claim after short verification delay
+      setTimeout(() => {
+        taskStates[taskId] = 'ready';
+        localStorage.setItem(`nx_tasks_${currentUser.id}`, JSON.stringify(taskStates));
+        renderTasks();
+      }, 2500);
+    }
+
+    async function claimTask(taskId) {
+      const task = allTasks.find(t => t.id === taskId);
+      if (!task || taskStates[taskId] !== 'ready') return;
+
+      taskStates[taskId] = 'claimed';
+      localStorage.setItem(`nx_tasks_${currentUser.id}`, JSON.stringify(taskStates));
+
+      balance += task.reward;
+      tasksDone++;
+      task.clicks++;
+
+      updateUI();
+      renderTasks();
+      syncUserToDB();
+
+      // Update click count in Supabase if promoted ad
+      if (!task.isOfficial && task.dbId) {
+        try {
+          const newStatus = task.clicks >= task.target ? 'completed' : 'active';
+          await db.from('ads').update({
+            current_clicks: task.clicks,
+            status: newStatus
+          }).eq('id', task.dbId);
+        } catch (e) {
+          console.error("Ad click update error:", e);
+        }
+      }
+
+      if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+    }
+
+    // =========================================================================
+    // SUBMIT PROMOTED AD (1 TON VIA TONCONNECT -> AUTO SUPABASE INSERT)
+    // =========================================================================
+    async function submitPromotedAd() {
+      const adType = document.getElementById('ad-type').value;
+      const title = document.getElementById('ad-title').value.trim();
+      const link = document.getElementById('ad-link').value.trim();
+
+      if (!title || !link || !link.startsWith('http')) {
+        alert("Please enter a valid title and Telegram link (starting with https://t.me/).");
+        return;
+      }
+
+      const btn = document.getElementById('pay-ad-btn');
+      btn.disabled = true;
+      btn.textContent = "Processing TON Payment...";
+
+      try {
+        if (!tonConnectUI || !tonConnectUI.connected) {
+          alert("Please connect your TON Wallet first using the 'Connect Wallet' button in Profile tab.");
+          btn.disabled = false;
+          btn.textContent = "Pay 1 TON & Auto-Activate";
+          closeModal('promote-modal');
+          switchTab('profile', document.querySelectorAll('.nav-btn')[3]);
+          return;
+        }
+
+        // Send 1 TON (1,000,000,000 nanotons) to Admin Wallet
+        const transaction = {
+          validUntil: Math.floor(Date.now() / 1000) + 300,
+          messages: [
+            {
+              address: ADMIN_TON_WALLET,
+              amount: "1000000000" // 1 TON
+            }
+          ]
+        };
+
+        const result = await tonConnectUI.sendTransaction(transaction);
+
+        if (result && result.boc) {
+          // Payment verified on wallet -> Auto-insert into Supabase
+          const { error } = await db.from('ads').insert([{
+            owner_id: currentUser.id,
+            ad_type: adType,
+            title: title,
+            link: link,
+            target_clicks: 1000,
+            current_clicks: 0,
+            tx_hash: result.boc.slice(0, 64),
+            status: 'active'
+          }]);
+
+          if (error) throw error;
+
+          alert("Payment Verified! Your ad is now LIVE on NX Task Flow.");
+          document.getElementById('ad-title').value = "";
+          document.getElementById('ad-link').value = "";
+          closeModal('promote-modal');
+          await loadLiveAds();
+        }
+      } catch (err) {
+        console.error("Ad payment error:", err);
+        alert("Transaction cancelled or failed. Please ensure you have at least 1.05 TON for fee + gas.");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Pay 1 TON & Auto-Activate";
+      }
+    }
+
+    function updateMyAdsList(adsData) {
+      const myAds = adsData.filter(a => a.owner_id === currentUser.id);
+      document.getElementById('my-ads-count').textContent = myAds.length;
+      const listEl = document.getElementById('my-ads-list');
+
+      if (myAds.length === 0) {
+        listEl.innerHTML = `<p class="text-slate-400 text-center py-6">You haven't created any promoted ads yet.</p>`;
+        return;
+      }
+
+      listEl.innerHTML = myAds.map(ad => `
+        <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex justify-between items-center">
+          <div>
+            <p class="font-bold text-white">${ad.title}</p>
+            <p class="text-[11px] text-slate-400 truncate max-w-[180px]">${ad.link}</p>
+          </div>
+          <div class="text-right">
+            <span class="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-bold text-[10px] uppercase">${ad.status}</span>
+            <p class="font-mono-num text-xs text-cyan-300 font-bold mt-1">${ad.current_clicks}/${ad.target_clicks}</p>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // =========================================================================
+    // UI UPDATES, MODALS & NAVIGATION
+    // =========================================================================
+    function updateUI() {
+      document.getElementById('main-balance').textContent = balance.toFixed(4);
+      document.getElementById('est-value').textContent = `≈ $${(balance * 0.02).toFixed(2)} est. reward value`;
+      document.getElementById('stat-tasks').textContent = tasksDone;
+      document.getElementById('modal-bal-status').textContent = `${balance.toFixed(2)} NX`;
+
+      const isSilver = tasksDone >= 5;
+      if (isSilver) {
+        document.getElementById('header-rank-text').textContent = "Lv.2 • Silver";
+        document.getElementById('profile-rank').textContent = "Silver Lv.2";
+        document.getElementById('modal-lvl-status').textContent = "Passed ✓";
+        document.getElementById('modal-lvl-status').className = "text-emerald-400 font-bold";
+        document.getElementById('mining-multiplier').textContent = "⚡ x1.25";
+        document.getElementById('daily-rate-text').textContent = "30.0 NX/day";
+        document.getElementById('hourly-rate-text').textContent = "1.25 NX/h • Lv.2";
+        document.getElementById('next-lvl-badge').textContent = "LV.2";
+        document.getElementById('next-lvl-title').textContent = "Rank Unlocked: Silver";
+        document.getElementById('next-lvl-desc').textContent = "Active 30.0 NX/day (x1.25 boost)";
+      }
+
+      const progressPct = Math.min(100, (tasksDone / 5) * 100);
+      document.getElementById('level-progress-text').textContent = `${Math.min(5, tasksDone)} / 5`;
+      document.getElementById('level-bar').style.width = `${progressPct}%`;
+    }
+
+    function requestWithdraw() {
+      const amt = Number(document.getElementById('withdraw-amount').value);
+      if (tasksDone < 5) {
+        alert("You must reach Level 2 Silver (complete 5 tasks) before withdrawing.");
+        return;
+      }
+      if (balance < 500 || amt < 500 || amt > balance) {
+        alert("Minimum withdrawal is 500 NX and cannot exceed your available balance.");
+        return;
+      }
+      alert("Withdrawal request submitted! Tokens will arrive in your connected TON wallet shortly.");
+      closeModal('withdraw-modal');
+    }
+
+    function switchTab(tabName, btnEl) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.getElementById(`tab-${tabName}`).classList.add('active');
+
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('text-blue-400', 'bg-blue-500/15');
+        btn.classList.add('text-slate-400');
+      });
+      btnEl.classList.remove('text-slate-400');
+      btnEl.classList.add('text-blue-400', 'bg-blue-500/15');
+    }
+
+    function openPromoteModal() { openModal('promote-modal'); }
+    function openMyAdsModal() { openModal('my-ads-modal'); }
+    function openWithdrawModal() { openModal('withdraw-modal'); }
+
+    function openModal(id) {
+      const m = document.getElementById(id);
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+    }
+
+    function closeModal(id) {
+      const m = document.getElementById(id);
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+    }
+
+    function copyInvite() {
+      const link = document.getElementById('invite-link-box').textContent.trim();
+      navigator.clipboard.writeText(link);
+      const btn = document.getElementById('copy-btn');
+      btn.textContent = "Copied ✓";
+      setTimeout(() => btn.textContent = "Copy Link", 2000);
+    }
+
+    function shareInvite() {
+      const link = encodeURIComponent(document.getElementById('invite-link-box').textContent.trim());
+      const text = encodeURIComponent("Join NX Task Flow and earn daily NX rewards!");
+      window.open(`https://t.me/share/url?url=${link}&text=${text}`, "_blank");
+    }
+
+    // Boot App
+    initUserInDB();
+    loadLiveAds();
+  </script>
+</body>
+</html>
